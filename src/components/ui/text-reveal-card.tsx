@@ -16,55 +16,80 @@ export const TextRevealCard = ({
   className?: string;
 }) => {
   const [widthPercentage, setWidthPercentage] = useState(0);
-  const cardRef = useRef<HTMLDivElement | any>(null);
-  const [left, setLeft] = useState(0);
-  const [localWidth, setLocalWidth] = useState(0);
-  const [isMouseOver, setIsMouseOver] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [cardMetrics, setCardMetrics] = useState<{ left: number, width: number }>({ 
+    left: 0, 
+    width: 0 
+  });
 
   useEffect(() => {
-    if (cardRef.current) {
-      const { left, width: localWidth } =
-        cardRef.current.getBoundingClientRect();
-      setLeft(left);
-      setLocalWidth(localWidth);
-    }
+    setIsClient(true);
+    
+    const updateCardMetrics = () => {
+      if (cardRef.current) {
+        const { left, width } = cardRef.current.getBoundingClientRect();
+        setCardMetrics({ left, width });
+      }
+    };
+
+    // Initial measurement
+    updateCardMetrics();
+
+    // Remeasure on window resize
+    window.addEventListener('resize', updateCardMetrics);
+
+    return () => {
+      window.removeEventListener('resize', updateCardMetrics);
+    };
   }, []);
 
-  function mouseMoveHandler(event: any) {
-    event.preventDefault();
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!isClient) return;
 
-    const { clientX } = event;
-    if (cardRef.current) {
-      const relativeX = clientX - left;
-      setWidthPercentage((relativeX / localWidth) * 100);
+    const clientX = 'touches' in event 
+      ? event.touches[0]?.clientX 
+      : (event as React.MouseEvent).clientX;
+
+    if (clientX !== undefined && cardRef.current) {
+      const relativeX = clientX - cardMetrics.left;
+      const newWidthPercentage = Math.max(0, Math.min(100, (relativeX / cardMetrics.width) * 100));
+      setWidthPercentage(newWidthPercentage);
     }
-  }
+  };
 
-  function mouseLeaveHandler() {
-    setIsMouseOver(false);
+  const handleMouseLeave = () => {
     setWidthPercentage(0);
-  }
-  function mouseEnterHandler() {
-    setIsMouseOver(true);
-  }
-  function touchMoveHandler(event: React.TouchEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const clientX = event.touches[0]!.clientX;
-    if (cardRef.current) {
-      const relativeX = clientX - left;
-      setWidthPercentage((relativeX / localWidth) * 100);
-    }
+  };
+
+  // Prevent server-side render of animated content
+  if (!isClient) {
+    return (
+      <div 
+        ref={cardRef}
+        className={cn(
+          "bg-[#1d1c20] border border-white/[0.08] w-[40rem] rounded-lg p-8 relative overflow-hidden",
+          className
+        )}
+      >
+        {children}
+        <div className="h-40 relative flex items-center overflow-hidden">
+          <p className="text-base sm:text-[3rem] py-10 font-bold bg-clip-text text-transparent bg-[#323238]">
+            {text}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const rotateDeg = (widthPercentage - 50) * 0.1;
+
   return (
     <div
-      onMouseEnter={mouseEnterHandler}
-      onMouseLeave={mouseLeaveHandler}
-      onMouseMove={mouseMoveHandler}
-      onTouchStart={mouseEnterHandler}
-      onTouchEnd={mouseLeaveHandler}
-      onTouchMove={touchMoveHandler}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onTouchMove={handleMouseMove}
+      onTouchEnd={handleMouseLeave}
       ref={cardRef}
       className={cn(
         "bg-[#1d1c20] border border-white/[0.08] w-[40rem] rounded-lg p-8 relative overflow-hidden",
@@ -73,23 +98,17 @@ export const TextRevealCard = ({
     >
       {children}
 
-      <div className="h-40  relative flex items-center overflow-hidden">
+      <div className="h-40 relative flex items-center overflow-hidden">
         <motion.div
           style={{
             width: "100%",
           }}
-          animate={
-            isMouseOver
-              ? {
-                  opacity: widthPercentage > 0 ? 1 : 0,
-                  clipPath: `inset(0 ${100 - widthPercentage}% 0 0)`,
-                }
-              : {
-                  clipPath: `inset(0 ${100 - widthPercentage}% 0 0)`,
-                }
-          }
-          transition={isMouseOver ? { duration: 0 } : { duration: 0.4 }}
-          className="absolute bg-[#1d1c20] z-20  will-change-transform"
+          animate={{
+            opacity: widthPercentage > 0 ? 1 : 0,
+            clipPath: `inset(0 ${100 - widthPercentage}% 0 0)`,
+          }}
+          transition={{ duration: 0.4 }}
+          className="absolute bg-[#1d1c20] z-20 will-change-transform"
         >
           <p
             style={{
@@ -106,11 +125,11 @@ export const TextRevealCard = ({
             rotate: `${rotateDeg}deg`,
             opacity: widthPercentage > 0 ? 1 : 0,
           }}
-          transition={isMouseOver ? { duration: 0 } : { duration: 0.4 }}
+          transition={{ duration: 0.4 }}
           className="h-40 w-[8px] bg-gradient-to-b from-transparent via-neutral-800 to-transparent absolute z-50 will-change-transform"
         ></motion.div>
 
-        <div className=" overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,white,transparent)]">
+        <div className="overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,white,transparent)]">
           <p className="text-base sm:text-[3rem] py-10 font-bold bg-clip-text text-transparent bg-[#323238]">
             {text}
           </p>
@@ -121,6 +140,7 @@ export const TextRevealCard = ({
   );
 };
 
+// Remaining components stay the same as in the previous implementation
 export const TextRevealCardTitle = ({
   children,
   className,
