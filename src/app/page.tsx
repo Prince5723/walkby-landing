@@ -1,15 +1,9 @@
-import {FlipWordsDemo} from '@/components/flip-words';
-import { TextRevealCardPreview } from "@/components/text-vanish";
+import { BackgroundGradientAnimationDemo } from '@/components/background';
 
 export default function Home() {
   return (
     <>
-    <div className="flex  items-center justify-between mx-8">
-    <FlipWordsDemo/>
-    <TextRevealCardPreview/>  
-    </div>
-
-    
+      <BackgroundGradientAnimationDemo />
     </>
   );
 }
