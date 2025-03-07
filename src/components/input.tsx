@@ -52,7 +52,7 @@ export function PlaceholdersAndVanishInputDemo() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-4">
       <PlaceholdersAndVanishInput
         placeholders={placeholders}
         onChange={handleChange}
